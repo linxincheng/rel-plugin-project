@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import './mainModal.styl'
 import Modal from 'antd/es/modal'
 import 'antd/es/modal/style/index.css'
-import FriendTab from '../../../popup/pages/home/children/friendTab/index'
-import { apiReqs } from '@/api'
 
 function MainModal(props) {
     // 接收父组件控制本组件关闭的方法
@@ -17,7 +15,7 @@ function MainModal(props) {
         <Modal
             className="CRX-mainModal CRX-antd-diy"
             visible={true}
-            title={'IC Contact 好友列表'}
+            title={'收藏'}
             footer={null}
             maskClosable={false}
             onCancel={() => {
@@ -25,7 +23,7 @@ function MainModal(props) {
             }}
             width={600}
         >
-            <FriendTab/>
+            暂无，待补充收藏逻辑
         </Modal>
     )
 }

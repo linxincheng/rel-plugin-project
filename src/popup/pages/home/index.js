@@ -1,137 +1,202 @@
-import React, {useState, useEffect} from 'react'
+import React, { useEffect, useState } from "react";
+import { Web3Auth } from "@web3auth/web3auth";
+import { LOGIN_MODAL_EVENTS } from "@web3auth/ui";
+import { ADAPTER_EVENTS, CHAIN_NAMESPACES, CONNECTED_EVENT_DATA, SafeEventEmitterProvider, UserInfo } from "@web3auth/base";
+import RPC from "./evm";
+// import "./App.css";
 import './home.styl'
-import { Tabs } from 'antd'
-import { BigNumber } from "ethers";
-import FriendTab from './children/friendTab/index'
-import MessageTab from './children/messageTab/index'
-import TestTab from './children/testTab/index'
-import LogoGather from '../motion/LogoGather/index';
-import { GithubOutlined, TwitterOutlined, FacebookOutlined, LoginOutlined} from '@ant-design/icons';
-import ContractsUtils from '../../../utils/contractsUtils.js';
-// import LogoSvg from '../motion/LogoGather/IC.svg';
-import DfinityLogo from './dfinity.png';
-// import { Ed25519KeyIdentity } from "@dfinity/identity";
 
-const { TabPane } = Tabs;
+const clientId = "BHciB82agZCQD1yCz4-e7VSNb4NjBcB19f0jXRc4ftlOf9HMhw27irXMB51fHiSq9ZKeuLVvIb0CqISIh-wjeyA"; // get from https://dashboard.web3auth.io
 
-function Home(props) {
-  const [tabKey, setTapKey] = useState(1);
-  const [message, setMessage] = useState(null);
-  const [address, setAddress] = useState('');
-
+function Home() {
+  const [web3auth, setWeb3auth] = useState(null);
+  const [provider, setProvider] = useState(null);
+  const [info, setInfo] = useState();
   useEffect(() => {
-    listenMessage();
-    handleAccountsChanged();
-    setAddress(ContractsUtils.getLocalStorageWallet()?.address);
-  }, [])
+    const init = async () => {
+      try {
 
-  const callback = (key) => {
-    setTapKey(key);
-  }
-
-  const toLogin = () => {
-		props.history.push('/login');
-    window.localStorage.setItem("wallet", '');
-    window.localStorage.setItem("friendSize", 0);
-    window.localStorage.setItem("friendList", []);
-    window.localStorage.setItem("messageList", []);
-	}
-
-  const toEthAccount = () => {
-		// props.history.push('/ethAccount')
-	}
-
-  const formatAddress = (addressStr) => {
-    return addressStr.substring(0, 4)+"..."+addressStr.substr(addressStr.length-4);
-  }
-
-  const listenMessage = async() => {
-    try {
-      let messageList = [];
-      if(!!window.localStorage.getItem("messageList") == true){
-        messageList = [...JSON.parse(window.localStorage.getItem("messageList"))]
-      }
-      var addressListContract = await ContractsUtils.createAddressListContract();
-      addressListContract.on('GetMessage', (from, to, value) => {
-        messageList.push({
-          sender: value.args.sender,
-          message: value.args.message,
-        });
-        window.localStorage.setItem("messageList", JSON.stringify(messageList));
-        setMessage(messageList);
+      const web3auth = new Web3Auth({
+        clientId,
+        chainConfig: {
+          chainNamespace: CHAIN_NAMESPACES.EIP155,
+          chainId: "0x1",
+          rpcTarget: "https://rpc.ankr.com/eth", // This is the mainnet RPC we have added, please pass on your own endpoint while creating an app
+        },
       });
-    } catch(err) {
-      console.log(err)
-    }
-  }
 
-  const handleAccountsChanged = async (arr) => {
-    var wallet = ContractsUtils.getLocalStorageWallet(); // ethers.utils.verifyMessage(message , signature);
-    let flatSig = await wallet.signMessage(ContractsUtils.getUserName(address) ?? 'IC contracts');
-    const array = flatSig
-      .replace("0x", "")
-      .match(/.{4}/g)
-      .map((hexNoPrefix) => BigNumber.from("0x" + hexNoPrefix).toNumber());
-    const uint8Array = Uint8Array.from(array);
-    console.log(uint8Array);
-    // console.log(Ed25519KeyIdentity);
-    // const id = Ed25519KeyIdentity.generate(uint8Array)
-    // console.log(id)
-    // console.log(id.getPrincipal().toString())
-  }
+      setWeb3auth(web3auth);
+
+      await web3auth.initModal();
+
+      web3auth.on(ADAPTER_EVENTS.CONNECTED, (data) => {
+        console.log("connected to wallet", data);
+        // web3auth.provider will be available here after user is connected
+      });
+      web3auth.on(ADAPTER_EVENTS.CONNECTING, () => {
+        console.log("connecting");
+      });
+      web3auth.on(ADAPTER_EVENTS.DISCONNECTED, () => {
+        console.log("disconnected");
+      });
+      web3auth.on(ADAPTER_EVENTS.ERRORED, (error) => {
+        console.log("error", error);
+      });
+      web3auth.on(ADAPTER_EVENTS.ERRORED, (error) => {
+        console.log("error", error);
+      });
+      // emitted when modal visibility changes.
+      web3auth.on(LOGIN_MODAL_EVENTS.MODAL_VISIBILITY, (isVisible) => {
+        console.log("is modal visible", isVisible);
+      });
+
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    init();
+  }, []);
+
+  const login = async () => {
+    if (!web3auth) {
+      console.log("web3auth not initialized yet");
+      return;
+    }
+    const web3authProvider = await web3auth.connect();
+    setProvider(web3authProvider);
+  };
+
+  const getUserInfo = async () => {
+    if (!web3auth) {
+      console.log("web3auth not initialized yet");
+      return;
+    }
+    const user = await web3auth.getUserInfo();
+    console.log(JSON.stringify(user));
+    setInfo(JSON.stringify(user));
+  };
+
+  const logout = async () => {
+    if (!web3auth) {
+      console.log("web3auth not initialized yet");
+      return;
+    }
+    await web3auth.logout();
+    setProvider(null);
+  };
+
+  const getAccounts = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const userAccount = await rpc.getAccounts();
+    console.log(userAccount);
+    setInfo(JSON.stringify(userAccount));
+  };
+
+  const getBalance = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const balance = await rpc.getBalance();
+    console.log(balance);
+    setInfo(balance);
+  };
+
+  const signMessage = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const result = await rpc.signMessage();
+    console.log(result);
+    setInfo(JSON.stringify(result));
+  };
+
+  const signTransaction = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const result = await rpc.signTransaction();
+    console.log(result);
+    setInfo(JSON.stringify(result));
+  };
+
+  const sendTransaction = async () => {
+    if (!provider) {
+      console.log("provider not initialized yet");
+      return;
+    }
+    const rpc = new RPC(provider);
+    const result = await rpc.signAndSendTransaction();
+    console.log(result);
+    setInfo(JSON.stringify(result));
+  };
+  const loggedInView = (
+    <>
+      <button onClick={getUserInfo} className="card">
+        Get User Info
+      </button>
+      <button onClick={getAccounts} className="card">
+        Get Accounts
+      </button>
+      <button onClick={getBalance} className="card">
+        Get Balance
+      </button>
+      <button onClick={signMessage} className="card">
+        Sign Message
+      </button>
+      <button onClick={signTransaction} className="card">
+        Sign Transaction
+      </button>
+      <button onClick={sendTransaction} className="card">
+        Send Transaction
+      </button>
+      <button onClick={logout} className="card">
+        Log Out
+      </button>
+
+      {/* <AccountInfo userInfo={userInfo}/> */}
+      {info && <p style={{ width: "100%" }}>info: {info}</p>}
+
+      <div id="console" style={{ whiteSpace: "pre-line" }}>
+        <p style={{ whiteSpace: "pre-line" }}></p>
+      </div>
+    </>
+  );
+
+  const unloggedInView = (
+    <button onClick={login} className="card">
+      Login
+    </button>
+  );
 
   return (
     <div className="layout-home">
-      <div className="section-one">
-        <LogoGather
-          width={150}
-          height={150}
-          pixSize={12}
-          pointSizeMin={8}
-          // image={LogoSvg}
-          image='https://zos.alipayobjects.com/rmsportal/TOXWfHIUGHvZIyb.svg'
-        />
-        <div className="bg">
-          <div className="lock">
-            <LoginOutlined className="lockStyle" onClick={toLogin}/>
-          </div>
-          <div className="avt">
-            <img 
-              className="icon" 
-              loading="lazy" 
-              src="images/logo-white.png"
-            >
-            </img>
-          </div>
-          <div className="address" >
-            <div className="data">IC - Contact</div>
-            <div className="data">{ContractsUtils.getUserName(address)}</div>
-          </div>
-          <div className="dfinityIdentify">
-            <div className="data">Identify Anchor</div>
-            <div className="data">{ContractsUtils.getUserName(address)}</div>
-          </div>
-          <div className="chainList">
-            <GithubOutlined spin={false} className="iconStyle" onClick={toEthAccount}/>
-            <TwitterOutlined spin={false} className="iconStyle" />
-            <FacebookOutlined spin={false} className="iconStyle" />
-            <span className="iconStyle" style={{ height: 30, width: 30, display: 'inline-block', position: 'relative' }}>
-              <img src={DfinityLogo} style={{ position: 'absolute', top: -2, left: 0, width: 26 }} />
-            </span>
-          </div>
-        </div>
-      </div>
+      <h1 className="title">
+        <a target="_blank" href="http://web3auth.io/" rel="noreferrer">
+          Web3Auth
+        </a>
+        & Test
+      </h1>
 
-      <div className="section-two">
-        <Tabs defaultActiveKey="1" onChange={callback} centered>
-          <TabPane tab="消息列表" key="1">{tabKey == 1 && <MessageTab message={message}/>}</TabPane>
-          <TabPane tab="通讯录" key="2">{tabKey == 2 && <FriendTab/>}</TabPane>
-          <TabPane tab="个人设置" key="3">{tabKey == 3 && <TestTab/>}</TabPane>
-          {/* <TabPane tab="合约测试" key="4"><TestTab/></TabPane> */}
-        </Tabs>
-      </div>
+      <div className="grid">{provider ? loggedInView : unloggedInView}</div>
+
+      <footer className="footer">
+        <a href="https://github.com/linxincheng/web3-auth" target="_blank" rel="noopener noreferrer">
+          Source code
+        </a>
+      </footer>
     </div>
-  )
+  );
 }
 
-export default Home
+export default Home;
