@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import ReactDOM from 'react-dom'
-import MainModal from './components/mainModal'
+// import MainModal from './components/mainModal'
 import './antd-diy.css'
 import './content.styl'
+import Home from './components/home'
 
 function Content() {
     const [mainModalVisible, setMainModalVisible] = useState(false)
-
+    console.log('mainModalVisible');
+    console.log(mainModalVisible);
     return (
         <div className="CRX-content">
             <div
@@ -15,13 +17,14 @@ function Content() {
                     setMainModalVisible(true)
                 }}
             ></div>
-            {mainModalVisible ? (
-                <MainModal
-                    onClose={() => {
-                        setMainModalVisible(false)
-                    }}
-                />
-            ) : null}
+            <Home
+                mainModalVisible={mainModalVisible}
+                onClose={async () => {
+                    console.log(2412435452);
+                    await setMainModalVisible(false);
+                    console.log(mainModalVisible);
+                }}
+            />
         </div>
     )
 }
