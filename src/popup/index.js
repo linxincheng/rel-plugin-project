@@ -13,10 +13,9 @@ function Popup() {
         } catch (err) {}
     }, []);
     return (
-        <></>
-        // <div className='popup'>
-        //     <a className='collection'>收藏</a>
-        // </div>
+        <div className='popup2'>
+            <a className='collection2'>收藏</a>
+        </div>
     )
 }
 
